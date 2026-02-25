@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bingo Card Generator</title>
+
+    <!-- Google Fonts -->
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              display: ['"Playfair Display"', "serif"],
+              sans: ['"DM Sans"', "system-ui", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- html2canvas CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNa5lKzYvK+GqORdzdrIW6DCeU44y7NysGEKMluSleqrs9jwELyhl725LLhcCq114F8CbnMD4PlcBMY3H8aIeg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  </head>
+
+  <body class="min-h-screen bg-amber-50 text-slate-900 font-sans">
+    <div class="min-h-screen flex flex-col">
+      <header class="border-b border-amber-200 bg-amber-100/80">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+          <div>
+            <h1 class="text-3xl sm:text-4xl font-bold font-display text-emerald-900 tracking-wide">
+              Community Bingo Night
+            </h1>
+            <p class="text-sm sm:text-base text-slate-700 mt-1">
+              Build custom keyword decks and generate printable bingo cards for your next game night.
+            </p>
+          </div>
+          <div class="text-xs sm:text-sm text-slate-600 mt-1 sm:mt-0">
+            All in your browser • No sign-in • No storage
+          </div>
+        </div>
+      </header>
+
+      <main class="flex-1">
+        <div class="max-w-6xl mx-auto px-4 py-6">
+          <div class="flex flex-col md:flex-row gap-6 md:gap-8">
+            <!-- Keyword Panel -->
+            <section
+              id="keyword-panel"
+              class="md:w-5/12 bg-white/80 border border-amber-200 rounded-2xl shadow-sm p-4 sm:p-5 flex flex-col gap-4"
+              aria-labelledby="keyword-panel-heading"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <h2
+                    id="keyword-panel-heading"
+                    class="text-lg sm:text-xl font-semibold text-emerald-900"
+                  >
+                    Keyword Pool
+                  </h2>
+                  <p class="text-xs sm:text-sm text-slate-600 mt-1">
+                    Add 25–50 unique phrases that describe your theme. We’ll pull from this pool to build each card.
+                  </p>
+                </div>
+                <span
+                  id="keyword-count-pill"
+                  class="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900"
+                >
+                  <span id="keyword-count-text">0 / 50</span>
+                </span>
+              </div>
+
+              <!-- Input & Add -->
+              <div class="space-y-2">
+                <label for="keyword-input" class="block text-xs font-medium text-slate-700">
+                  Add a keyword or several (use <span class="font-mono">;</span> to separate)
+                </label>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <input
+                    id="keyword-input"
+                    type="text"
+                    autocomplete="off"
+                    class="flex-1 rounded-xl border border-amber-200 bg-white/70 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="e.g. Potluck dish; Awkward icebreaker; Board game"
+                  />
+                  <button
+                    id="add-keyword"
+                    class="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-amber-50 shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+                    type="button"
+                  >
+                    Add
+                  </button>
+                </div>
+                <p
+                  id="keyword-error"
+                  class="text-xs text-rose-600 min-h-[1.25rem]"
+                  aria-live="polite"
+                ></p>
+              </div>
+
+              <!-- Status -->
+              <div
+                id="keyword-status"
+                class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-700"
+              >
+                Add at least 25 unique keywords to start generating cards.
+              </div>
+
+              <!-- Chips -->
+              <div class="flex-1 flex flex-col gap-2">
+                <div class="flex items-center justify-between gap-2 text-xs text-slate-600">
+                  <span>Current keywords</span>
+                  <span id="keyword-remaining-text"></span>
+                </div>
+                <div
+                  id="keyword-chips"
+                  class="min-h-[3rem] max-h-56 overflow-y-auto rounded-xl border border-amber-100 bg-amber-50/70 px-2 py-2 flex flex-wrap gap-2"
+                  aria-live="polite"
+                  aria-label="Current keyword pool"
+                ></div>
+              </div>
+
+              <!-- Generate Button -->
+              <div class="pt-2 border-t border-amber-100 flex flex-col gap-2">
+                <button
+                  id="generate-card"
+                  class="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-amber-50 shadow-md transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+                  type="button"
+                  disabled
+                  title="Add at least 25 keywords to generate a card."
+                >
+                  Generate Bingo Card
+                </button>
+                <p class="text-[11px] text-slate-500">
+                  Cards are kept only for this session. Refreshing the page clears everything.
+                </p>
+              </div>
+            </section>
+
+            <!-- Card Panel -->
+            <section
+              id="card-panel"
+              class="md:w-7/12 flex flex-col gap-4"
+              aria-labelledby="card-panel-heading"
+            >
+              <div class="bg-white/80 border border-emerald-100 rounded-2xl shadow-sm p-4 sm:p-5 flex flex-col gap-3">
+                <div class="flex items-center justify-between gap-2">
+                  <div>
+                    <h2
+                      id="card-panel-heading"
+                      class="text-lg sm:text-xl font-semibold text-emerald-900"
+                    >
+                      Current Bingo Card
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-600 mt-1">
+                      The most recently generated card appears here. Use the list below to switch between cards.
+                    </p>
+                  </div>
+                  <button
+                    id="download-card"
+                    type="button"
+                    class="inline-flex items-center justify-center rounded-xl border border-emerald-700 bg-white px-3 py-1.5 text-xs sm:text-sm font-semibold text-emerald-800 shadow-sm transition hover:bg-emerald-700 hover:text-amber-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-500"
+                    title="Generate a card first, then you can download it."
+                    disabled
+                  >
+                    Download as PNG
+                  </button>
+                </div>
+
+                <!-- Session Banner -->
+                <div
+                  id="session-banner"
+                  class="hidden rounded-xl border border-amber-400 bg-amber-100/90 px-3 py-2 text-xs text-amber-900"
+                  aria-live="polite"
+                >
+                  You’ve reached the session limit of 10 cards. Refresh the page or download/print your cards
+                  before they’re gone. Refreshing will reset everything.
+                </div>
+
+                <!-- Current Card Container (captured by html2canvas) -->
+                <div
+                  id="current-card-wrapper"
+                  class="mt-1"
+                >
+                  <div
+                    id="current-card-container"
+                    class="mx-auto max-w-lg rounded-2xl border border-emerald-200 bg-emerald-50/80 shadow-sm px-4 py-4 sm:px-6 sm:py-5 transition"
+                  >
+                    <div
+                      id="current-card-meta"
+                      class="mb-3 flex items-center justify-between text-[11px] sm:text-xs text-slate-600"
+                    >
+                      <span>No card yet</span>
+                      <span>Generate your first card to see it here.</span>
+                    </div>
+                    <div
+                      id="current-card-inner"
+                      class="aspect-square flex items-center justify-center text-xs text-slate-500"
+                    >
+                      <p class="max-w-xs text-center">
+                        Add at least 25 keywords on the left, then click
+                        <span class="font-semibold">Generate Bingo Card</span> to create your first card.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Session Card List -->
+              <div class="bg-white/80 border border-emerald-100 rounded-2xl shadow-sm p-4 sm:p-5 flex flex-col gap-3">
+                <div class="flex items-center justify-between gap-2">
+                  <div>
+                    <h3 class="text-sm sm:text-base font-semibold text-emerald-900">
+                      Session Cards
+                    </h3>
+                    <p class="text-[11px] sm:text-xs text-slate-600 mt-0.5">
+                      Up to 10 cards per session. Existing cards stay even if you change the keyword pool.
+                    </p>
+                  </div>
+                  <span
+                    id="card-count-pill"
+                    class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-800"
+                  >
+                    <span id="card-count-text">0 / 10 cards</span>
+                  </span>
+                </div>
+
+                <div
+                  id="card-list"
+                  class="mt-1 max-h-64 overflow-y-auto divide-y divide-emerald-50"
+                  aria-label="Generated cards this session"
+                >
+                  <p class="py-3 text-xs text-slate-500 text-center">
+                    No cards yet. Generate a card to start your session history.
+                  </p>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+
+      <footer class="border-t border-amber-200 bg-amber-100/70">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] sm:text-xs text-slate-600">
+          <span>Built for cozy community game nights.</span>
+          <span>All data lives in this tab only. Refreshing clears everything.</span>
+        </div>
+      </footer>
+    </div>
+
+    <script>
+      // --- State -------------------------------------------------------------
+      const state = {
+        keywords: [],
+        cards: [],
+        currentCardId: null,
+      };
+
+      // --- DOM References ----------------------------------------------------
+      const keywordInput = document.getElementById("keyword-input");
+      const addKeywordBtn = document.getElementById("add-keyword");
+      const keywordError = document.getElementById("keyword-error");
+      const keywordChips = document.getElementById("keyword-chips");
+      const keywordStatus = document.getElementById("keyword-status");
+      const keywordCountText = document.getElementById("keyword-count-text");
+      const keywordRemainingText = document.getElementById("keyword-remaining-text");
+
+      const generateCardBtn = document.getElementById("generate-card");
+      const sessionBanner = document.getElementById("session-banner");
+
+      const currentCardContainer = document.getElementById("current-card-container");
+      const currentCardInner = document.getElementById("current-card-inner");
+      const currentCardMeta = document.getElementById("current-card-meta");
+      const downloadCardBtn = document.getElementById("download-card");
+
+      const cardList = document.getElementById("card-list");
+      const cardCountText = document.getElementById("card-count-text");
+
+      // --- Helpers -----------------------------------------------------------
+      function createId() {
+        return (
+          "card-" +
+          Date.now().toString(36) +
+          "-" +
+          Math.random().toString(36).slice(2, 8)
+        );
+      }
+
+      function shuffleInPlace(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+      }
+
+      function formatTimestamp(date) {
+        const d = typeof date === "string" ? new Date(date) : date;
+        return d.toLocaleString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        });
+      }
+
+      function getKeywordCountInfo() {
+        const count = state.keywords.length;
+        const remaining = 50 - count;
+        return { count, remaining };
+      }
+
+      function clearKeywordError() {
+        keywordError.textContent = "";
+      }
+
+      function showKeywordError(message) {
+        keywordError.textContent = message;
+      }
+
+      function updateGenerateButtonState() {
+        const { count } = getKeywordCountInfo();
+        const maxCardsReached = state.cards.length >= 10;
+
+        if (maxCardsReached) {
+          generateCardBtn.disabled = true;
+          generateCardBtn.title =
+            "Session limit of 10 cards reached. Refresh the page to start over.";
+          return;
+        }
+
+        if (count < 25) {
+          generateCardBtn.disabled = true;
+          generateCardBtn.title = "Add at least 25 keywords to generate a card.";
+        } else {
+          generateCardBtn.disabled = false;
+          generateCardBtn.title = "";
+        }
+      }
+
+      function updateKeywordInputState() {
+        const { count } = getKeywordCountInfo();
+        const atMax = count >= 50;
+        keywordInput.disabled = atMax;
+        addKeywordBtn.disabled = atMax;
+      }
+
+      // --- Rendering: Keywords ----------------------------------------------
+      function renderKeywordStatus() {
+        const { count, remaining } = getKeywordCountInfo();
+        keywordCountText.textContent = count + " / 50";
+        keywordRemainingText.textContent =
+          (remaining > 0 ? remaining + " slots remaining" : "Maximum reached") +
+          " • " +
+          (count < 25 ? "Need 25+ to generate" : "Ready to generate");
+
+        if (count < 25) {
+          keywordStatus.className =
+            "rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-700";
+          keywordStatus.textContent =
+            "Add at least 25 unique keywords to generate bingo cards.";
+        } else {
+          keywordStatus.className =
+            "rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-800";
+          keywordStatus.textContent =
+            "Great! You’re ready to generate cards. You can add up to 50 total keywords.";
+        }
+      }
+
+      function renderKeywordChips() {
+        keywordChips.innerHTML = "";
+        if (state.keywords.length === 0) {
+          const empty = document.createElement("p");
+          empty.className = "text-xs text-slate-500";
+          empty.textContent = "No keywords yet. Add some above to get started.";
+          keywordChips.appendChild(empty);
+          return;
+        }
+
+        state.keywords.forEach((kw, index) => {
+          const chip = document.createElement("button");
+          chip.type = "button";
+          chip.className =
+            "group inline-flex items-center gap-1 rounded-full bg-amber-100/90 px-3 py-1 text-xs text-amber-900 border border-amber-200 shadow-sm hover:bg-amber-200 transition";
+          chip.setAttribute("data-index", String(index));
+          chip.title = "Click the × to remove this keyword";
+
+          const span = document.createElement("span");
+          span.textContent = kw;
+
+          const removeBtn = document.createElement("span");
+          removeBtn.className =
+            "ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-900 group-hover:bg-amber-300";
+          removeBtn.textContent = "×";
+          removeBtn.setAttribute("data-remove-index", String(index));
+          removeBtn.setAttribute("aria-label", `Remove keyword: ${kw}`);
+
+          chip.appendChild(span);
+          chip.appendChild(removeBtn);
+          keywordChips.appendChild(chip);
+        });
+      }
+
+      function renderKeywords() {
+        renderKeywordChips();
+        renderKeywordStatus();
+        updateGenerateButtonState();
+        updateKeywordInputState();
+      }
+
+      // --- Rendering: Current Card ------------------------------------------
+      function renderCurrentCard() {
+        const cards = state.cards;
+        if (!state.currentCardId || cards.length === 0) {
+          currentCardMeta.innerHTML =
+            '<span>No card yet</span><span>Generate your first card to see it here.</span>';
+          currentCardInner.className =
+            "aspect-square flex items-center justify-center text-xs text-slate-500";
+          currentCardInner.innerHTML =
+            '<p class="max-w-xs text-center">Add at least 25 keywords on the left, then click <span class="font-semibold">Generate Bingo Card</span> to create your first card.</p>';
+          downloadCardBtn.disabled = true;
+          downloadCardBtn.title = "Generate a card first, then you can download it.";
+          return;
+        }
+
+        const index = cards.findIndex((c) => c.id === state.currentCardId);
+        const card = index >= 0 ? cards[index] : cards[cards.length - 1];
+
+        currentCardMeta.innerHTML = "";
+        const left = document.createElement("span");
+        left.textContent = "Card #" + (cards.indexOf(card) + 1);
+        const right = document.createElement("span");
+        right.textContent = formatTimestamp(card.createdAt);
+        currentCardMeta.appendChild(left);
+        currentCardMeta.appendChild(right);
+
+        // Build BINGO card grid
+        currentCardInner.innerHTML = "";
+        currentCardInner.className =
+          "aspect-square bg-white rounded-2xl shadow-md p-3 sm:p-4 flex flex-col gap-2";
+
+        const headerRow = document.createElement("div");
+        headerRow.className = "grid grid-cols-5 gap-1 mb-1";
+        ["B", "I", "N", "G", "O"].forEach((letter) => {
+          const cell = document.createElement("div");
+          cell.className =
+            "flex items-center justify-center rounded-lg bg-emerald-700 text-amber-50 font-display text-lg sm:text-xl tracking-widest";
+          cell.textContent = letter;
+          headerRow.appendChild(cell);
+        });
+
+        const gridWrapper = document.createElement("div");
+        gridWrapper.className = "grid grid-rows-5 gap-1 flex-1";
+
+        for (let row = 0; row < 5; row++) {
+          const rowDiv = document.createElement("div");
+          rowDiv.className = "grid grid-cols-5 gap-1";
+          for (let col = 0; col < 5; col++) {
+            const value = card.grid[row][col];
+            const isFree = row === 2 && col === 2;
+            const cell = document.createElement("div");
+
+            const baseClasses =
+              "flex items-center justify-center text-center rounded-lg border px-1 sm:px-1.5 py-1 sm:py-1.5 leading-tight transition";
+            const textLength = value ? value.length : 0;
+            const sizeClass =
+              textLength > 28
+                ? "text-[9px] sm:text-[10px]"
+                : textLength > 18
+                ? "text-[10px] sm:text-xs"
+                : "text-xs sm:text-sm";
+
+            if (isFree) {
+              cell.className =
+                baseClasses +
+                " " +
+                "bg-amber-300 border-amber-500 text-emerald-900 font-semibold shadow-inner";
+              cell.innerHTML =
+                '<div class="flex flex-col items-center justify-center leading-tight"><span class="text-[11px] sm:text-xs tracking-wide">FREE</span><span class="text-[10px] sm:text-xs">SPACE</span></div>';
+            } else {
+              cell.className =
+                baseClasses +
+                " " +
+                "bg-emerald-50 border-emerald-200 text-emerald-900 " +
+                sizeClass;
+              cell.textContent = value;
+            }
+
+            rowDiv.appendChild(cell);
+          }
+          gridWrapper.appendChild(rowDiv);
+        }
+
+        currentCardInner.appendChild(headerRow);
+        currentCardInner.appendChild(gridWrapper);
+
+        downloadCardBtn.disabled = false;
+        downloadCardBtn.title = "";
+      }
+
+      // --- Rendering: Card List ---------------------------------------------
+      function renderCardList() {
+        cardList.innerHTML = "";
+
+        const total = state.cards.length;
+        cardCountText.textContent = total + " / 10 cards";
+
+        if (total === 0) {
+          const empty = document.createElement("p");
+          empty.className = "py-3 text-xs text-slate-500 text-center";
+          empty.textContent =
+            "No cards yet. Generate a card to start your session history.";
+          cardList.appendChild(empty);
+          return;
+        }
+
+        state.cards.forEach((card, index) => {
+          const item = document.createElement("div");
+          item.className = "py-2.5 flex flex-col gap-1.5";
+
+          const topRow = document.createElement("div");
+          topRow.className = "flex items-center justify-between gap-2";
+
+          const meta = document.createElement("div");
+          meta.className = "flex flex-col text-xs text-slate-700";
+
+          const title = document.createElement("span");
+          title.className = "font-semibold text-emerald-900";
+          title.textContent = "Card #" + (index + 1);
+
+          const time = document.createElement("span");
+          time.className = "text-[11px] text-slate-500";
+          time.textContent = formatTimestamp(card.createdAt);
+
+          meta.appendChild(title);
+          meta.appendChild(time);
+
+          const actions = document.createElement("div");
+          actions.className = "flex items-center gap-2";
+
+          const viewBtn = document.createElement("button");
+          viewBtn.type = "button";
+          viewBtn.className =
+            "inline-flex items-center justify-center rounded-full bg-emerald-700 px-3 py-1.5 text-[11px] font-semibold text-amber-50 shadow-sm hover:bg-emerald-800 focus:outline-none focus:ring-1 focus:ring-emerald-500";
+          viewBtn.textContent = "View";
+          viewBtn.addEventListener("click", () => {
+            state.currentCardId = card.id;
+            renderCurrentCard();
+          });
+
+          const toggleBtn = document.createElement("button");
+          toggleBtn.type = "button";
+          toggleBtn.className =
+            "inline-flex items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] text-emerald-800 hover:bg-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-500";
+          toggleBtn.textContent = "Keywords";
+          toggleBtn.setAttribute("aria-expanded", "false");
+
+          actions.appendChild(viewBtn);
+          actions.appendChild(toggleBtn);
+
+          topRow.appendChild(meta);
+          topRow.appendChild(actions);
+
+          const keywordsPanel = document.createElement("div");
+          keywordsPanel.className =
+            "mt-1 hidden rounded-xl bg-emerald-50/70 border border-emerald-100 px-2 py-2";
+
+          const kwLabel = document.createElement("div");
+          kwLabel.className = "text-[11px] font-medium text-emerald-900 mb-1";
+          kwLabel.textContent = "Keywords on this card:";
+
+          const kwWrap = document.createElement("div");
+          kwWrap.className = "flex flex-wrap gap-1.5 text-[11px] text-emerald-900";
+
+          card.keywords.forEach((kw) => {
+            const tag = document.createElement("span");
+            tag.className =
+              "inline-flex items-center rounded-full bg-white/80 border border-emerald-100 px-2 py-0.5";
+            tag.textContent = kw;
+            kwWrap.appendChild(tag);
+          });
+
+          keywordsPanel.appendChild(kwLabel);
+          keywordsPanel.appendChild(kwWrap);
+
+          toggleBtn.addEventListener("click", () => {
+            const isHidden = keywordsPanel.classList.contains("hidden");
+            if (isHidden) {
+              keywordsPanel.classList.remove("hidden");
+              toggleBtn.setAttribute("aria-expanded", "true");
+              toggleBtn.textContent = "Hide keywords";
+            } else {
+              keywordsPanel.classList.add("hidden");
+              toggleBtn.setAttribute("aria-expanded", "false");
+              toggleBtn.textContent = "Keywords";
+            }
+          });
+
+          item.appendChild(topRow);
+          item.appendChild(keywordsPanel);
+
+          cardList.appendChild(item);
+        });
+      }
+
+      // --- Keyword Logic ----------------------------------------------------
+      function addKeywordsFromInput() {
+        const raw = keywordInput.value;
+        if (!raw || !raw.trim()) {
+          return;
+        }
+        clearKeywordError();
+
+        const parts = raw.split(";").map((p) => p.trim()).filter(Boolean);
+        if (parts.length === 0) {
+          return;
+        }
+
+        const lowerExisting = state.keywords.map((k) => k.toLowerCase());
+        let duplicates = [];
+        let addedAny = false;
+
+        for (const candidate of parts) {
+          if (!candidate) continue;
+          const lower = candidate.toLowerCase();
+          if (lowerExisting.includes(lower)) {
+            duplicates.push(candidate);
+            continue;
+          }
+
+          if (state.keywords.length >= 50) {
+            showKeywordError(
+              "Maximum of 50 keywords reached. Extra items were ignored."
+            );
+            break;
+          }
+
+          state.keywords.push(candidate);
+          lowerExisting.push(lower);
+          addedAny = true;
+        }
+
+        if (duplicates.length > 0) {
+          showKeywordError(
+            "Duplicate keywords not added: " + duplicates.join(", ")
+          );
+        }
+
+        if (!addedAny && duplicates.length === 0) {
+          showKeywordError("Nothing new to add.");
+        }
+
+        keywordInput.value = "";
+        renderKeywords();
+      }
+
+      function handleKeywordChipClick(event) {
+        const target = event.target;
+        const indexAttr = target.getAttribute("data-remove-index");
+        if (indexAttr == null) return;
+
+        const index = Number(indexAttr);
+        if (Number.isNaN(index)) return;
+
+        state.keywords.splice(index, 1);
+        clearKeywordError();
+        renderKeywords();
+      }
+
+      // --- Card Generation --------------------------------------------------
+      function canGenerateCard() {
+        const count = state.keywords.length;
+        return count >= 25 && count <= 50 && state.cards.length < 10;
+      }
+
+      function generateCard() {
+        if (!canGenerateCard()) {
+          return;
+        }
+
+        const pool = state.keywords.slice();
+        shuffleInPlace(pool);
+        const selected = pool.slice(0, 24);
+
+        const grid = [];
+        let ptr = 0;
+        for (let row = 0; row < 5; row++) {
+          const rowArr = [];
+          for (let col = 0; col < 5; col++) {
+            if (row === 2 && col === 2) {
+              rowArr.push("FREE SPACE");
+            } else {
+              rowArr.push(selected[ptr]);
+              ptr += 1;
+            }
+          }
+          grid.push(rowArr);
+        }
+
+        const now = new Date();
+        const card = {
+          id: createId(),
+          createdAt: now,
+          grid,
+          keywords: selected.slice(),
+        };
+
+        state.cards.push(card);
+        state.currentCardId = card.id;
+
+        if (state.cards.length === 10) {
+          sessionBanner.classList.remove("hidden");
+        }
+
+        updateGenerateButtonState();
+        renderCurrentCard();
+        renderCardList();
+      }
+
+      // --- Download PNG -----------------------------------------------------
+      function downloadCurrentCardAsPng() {
+        if (!state.currentCardId || state.cards.length === 0) {
+          return;
+        }
+
+        const card = state.cards.find((c) => c.id === state.currentCardId);
+        if (!card) return;
+
+        const target = currentCardContainer;
+        if (!target) return;
+
+        downloadCardBtn.disabled = true;
+        downloadCardBtn.textContent = "Preparing...";
+
+        html2canvas(target, { scale: 2 }).then(
+          (canvas) => {
+            const dataUrl = canvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = dataUrl;
+            link.download = `bingo-card-${card.id}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          },
+          () => {
+            // no-op on error; keeping UX simple
+          }
+        ).finally(() => {
+          downloadCardBtn.disabled = false;
+          downloadCardBtn.textContent = "Download as PNG";
+        });
+      }
+
+      // --- Event Wiring -----------------------------------------------------
+      function wireEvents() {
+        addKeywordBtn.addEventListener("click", addKeywordsFromInput);
+
+        keywordInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            addKeywordsFromInput();
+          }
+        });
+
+        keywordChips.addEventListener("click", handleKeywordChipClick);
+        generateCardBtn.addEventListener("click", generateCard);
+        downloadCardBtn.addEventListener("click", downloadCurrentCardAsPng);
+      }
+
+      // --- Init -------------------------------------------------------------
+      function init() {
+        renderKeywords();
+        renderCurrentCard();
+        renderCardList();
+        wireEvents();
+      }
+
+      init();
+    </script>
+  </body>
+</html>
+
